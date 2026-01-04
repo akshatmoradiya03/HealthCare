@@ -45,22 +45,29 @@ def request_pro():
 def invite_client():
     current_user_id = get_jwt_identity()
     claims = get_jwt()
+    print(f"DEBUG: invite_client called by user {current_user_id}, role={claims.get('role')}")
+    
     if claims.get('role') != 'professional':
+        print("DEBUG: User is not a professional")
         return jsonify({'message': 'Only professionals can invite clients'}), 403
     
     data = request.get_json()
     client_email = data.get('client_email')
+    print(f"DEBUG: Inviting email: {client_email}")
     
     if not client_email:
+        print("DEBUG: Client email is missing")
         return jsonify({'message': 'Client email is required'}), 400
         
     client = User.query.filter_by(email=client_email, role='client').first()
     if not client:
+        print(f"DEBUG: Client with email {client_email} not found")
         return jsonify({'message': 'Client not found'}), 404
         
     # Check if connection already exists
     existing = Connection.query.filter_by(client_id=client.id, professional_id=current_user_id).first()
     if existing:
+        print(f"DEBUG: Connection already exists between pro {current_user_id} and client {client.id}. Status: {existing.status}")
         return jsonify({'message': 'Connection already exists'}), 400
         
     connection = Connection(
@@ -128,16 +135,21 @@ def list_connections():
 @jwt_required()
 def remove_connection(connection_id):
     current_user_id = get_jwt_identity()
+    print(f"DEBUG: Attempting to remove connection {connection_id} by user {current_user_id}")
 
     connection = Connection.query.get(connection_id)
     if not connection:
+        print(f"DEBUG: Connection {connection_id} not found in DB")
         return jsonify({'message': 'Connection not found'}), 404
 
     # Only allow the client or professional involved to remove the connection
+    print(f"DEBUG: Checking auth: client={connection.client_id}, pro={connection.professional_id}, current={current_user_id}")
     if str(connection.client_id) != str(current_user_id) and str(connection.professional_id) != str(current_user_id):
+        print("DEBUG: Unauthorized")
         return jsonify({'message': 'Unauthorized'}), 403
 
     db.session.delete(connection)
     db.session.commit()
+    print(f"DEBUG: Connection {connection_id} removed successfully")
 
     return jsonify({'message': 'Connection removed'}), 200
