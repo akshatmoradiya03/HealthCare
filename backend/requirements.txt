@@ -8,3 +8,4 @@ marshmallow-sqlalchemy
 python-dotenv
 flask-cors
 psycopg2-binary
+gunicorn
